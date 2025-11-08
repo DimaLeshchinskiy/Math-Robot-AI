@@ -1,5 +1,4 @@
-from fastapi import Depends, APIRouter, UploadFile, File, Response, HTTPException
-from typing import Optional
+from fastapi import Depends, APIRouter, UploadFile, File, Response, HTTPException, status
 import zipfile
 import io
 from app.services.auth_service import basic_auth
@@ -9,7 +8,7 @@ from app.services.whiteboard_processor_service import WhiteboardProcessorService
 router = APIRouter()
 
 @router.post(
-    "/whiteboard/problems",
+    "/whiteboard/problems/{target_regions}",
     summary="Extract Mathematical Problems from Whiteboard",
     responses={
         200: {"description": "Successfully extracted mathematical problems"},
@@ -20,14 +19,18 @@ router = APIRouter()
     }
 )
 async def extract_whiteboard_problems(
+    target_regions: int,
     file: UploadFile = File(..., description="Whiteboard image containing mathematical problems"),
     username: str = Depends(basic_auth)
 ) -> Response:
     """Extract individual mathematical problems from a whiteboard image"""
     try:
 
+        if target_regions > 20 or target_regions < 1:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="target_regions should be betwwen 1 and 20")
+
         internal_file = await FileService.validate_and_convert(file)
-        problem_files = await WhiteboardProcessorService.extract_problems(internal_file)
+        problem_files = await WhiteboardProcessorService.extract_problems(internal_file, target_regions=target_regions)
         
         # Create ZIP response
         zip_buffer = io.BytesIO()

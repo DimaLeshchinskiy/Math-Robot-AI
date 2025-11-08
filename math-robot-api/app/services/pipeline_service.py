@@ -17,13 +17,13 @@ class PipelineService:
     """
     
     @staticmethod
-    async def process_pipeline(file: File, padding_ratio: float = 0.05) -> List[Dict[str, Any]]:
+    async def process_pipeline(file: File, target_regions: int = 1) -> List[Dict[str, Any]]:
         """
         Complete pipeline: split whiteboard → OCR each problem → return LaTeX results
         
         Args:
             file: Internal File model
-            padding_ratio: Padding for problem detection
+            target_regions: Number of expressions expected in the image (default: 1)
             
         Returns:
             List of dictionaries containing problem data and LaTeX results
@@ -31,7 +31,7 @@ class PipelineService:
         try:
             # Step 1: Split whiteboard into individual problems
             logger.info("Step 1: Splitting whiteboard image into individual problems")
-            problem_files = await WhiteboardProcessorService.extract_problems(file, padding_ratio)
+            problem_files = await WhiteboardProcessorService.extract_problems(file, padding_ratio=0.1, target_regions=target_regions)
             
             if not problem_files:
                 raise HTTPException(status_code=400, detail="No mathematical problems detected in the image")

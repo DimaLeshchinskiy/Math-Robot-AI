@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, UploadFile, File, HTTPException
+from fastapi import Depends, APIRouter, UploadFile, File, HTTPException, status
 import time
 
 from app.services.auth_service import basic_auth
@@ -9,7 +9,7 @@ from app.schemas.pipeline_schema import PipelineResponse, ProblemResult
 router = APIRouter()
 
 @router.post(
-    "/pipeline",
+    "/pipeline/{target_regions}",
     response_model=PipelineResponse,
     summary="Complete Pipeline",
     description="""
@@ -31,12 +31,14 @@ router = APIRouter()
     }
 )
 async def process_pipeline(
+    target_regions: int,
     file: UploadFile = File(..., description="Whiteboard image containing mathematical problems"),
     username: str = Depends(basic_auth)
 ) -> PipelineResponse:
     """
     Complete pipeline processing for whiteboard images.
 
+    - **target_regions**: Number of expressions expected in the image (1-20, required)
     - **file**: Whiteboard image with multiple math problems (required)
     - **Returns**: Structured results with LaTeX formulas and processing status
 
@@ -50,11 +52,14 @@ async def process_pipeline(
     start_time = time.time()
     
     try:
+        if target_regions > 20 or target_regions < 1:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="target_regions should be betwwen 1 and 20")
+        
         # Validate and convert to internal file model
         internal_file = await FileService.validate_and_convert(file)
         
         # Process through pipeline
-        raw_results = await PipelineService.process_pipeline(internal_file, padding_ratio=0.1)
+        raw_results = await PipelineService.process_pipeline(internal_file, target_regions=target_regions)
         
         # Calculate processing time
         processing_time = time.time() - start_time
