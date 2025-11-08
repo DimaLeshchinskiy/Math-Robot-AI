@@ -1,0 +1,85 @@
+version: "3.8"
+
+name: math-robot
+
+services:
+  math-robot-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: math-robot-api:latest
+    container_name: math-robot-api
+    restart: unless-stopped
+    environment:
+      - BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
+      - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
+      - OLLAMA_URL=http://ollama:11434
+    volumes:
+      - ../app:/app/app
+    networks:
+      - app-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.math-robot-api.rule=Host(`${TRAEFIK_HOST}`)"
+      - "traefik.http.routers.math-robot-api.entrypoints=web"
+      - "traefik.http.services.math-robot-api.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.math-robot-api-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.math-robot-api-ratelimit.ratelimit.burst=50"
+      - "traefik.http.routers.math-robot-api.middlewares=math-robot-api-ratelimit"
+
+  traefik:
+    image: "traefik:v3.3"
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --log.level=DEBUG
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.math-robot.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+  ollama:
+    image: ollama/ollama:0.12.10
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    networks:
+      - app-network
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=false"
+    entrypoint: >
+      sh -c "
+        /bin/ollama serve &
+        sleep 10 &&
+        echo 'Warmup complete' | ollama run qwen2.5:3b --keepalive 0 &&
+        wait
+      "
+
+networks:
+  app-network:
+    driver: bridge
