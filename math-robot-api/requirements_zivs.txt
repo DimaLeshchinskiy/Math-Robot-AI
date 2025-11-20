@@ -1,3 +1,0 @@
-pix2text
-opencv-python
-Pillow

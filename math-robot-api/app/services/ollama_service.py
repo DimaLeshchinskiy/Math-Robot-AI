@@ -1,41 +1,84 @@
 import aiohttp
+import asyncio
 import logging
 from fastapi import HTTPException
 from app.config import config
 
 logger = logging.getLogger(__name__)
 
+
 class OllamaService:
-    """
-    Service for calling the Ollama API to filter or refine LaTeX problems.
-    """
+    __instance = None
+    __lock = asyncio.Lock()
+    __is_warmed_up = False
+
+    @classmethod
+    async def get_instance(cls):
+        """Return the singleton instance."""
+        async with cls.__lock:
+            if cls.__instance is None:
+                cls.__instance = OllamaService()
+            return cls.__instance
+
+    @classmethod
+    async def init(cls) -> None:
+        """Warm up the Ollama model (only once)."""
+        async with cls.__lock:
+            if cls.__is_warmed_up:
+                return
+
+            logger.info("🔄 Warming up Ollama model qwen2.5:3b...")
+
+            model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
+            payload = {
+                "model": "qwen2.5:3b",
+                "prompt": "warmup",
+                "stream": False,
+                "options": {"num_predict": 1}
+            }
+
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(model_url, json=payload) as response:
+                        if response.status != 200:
+                            text = await response.text()
+                            logger.error(
+                                f"Ollama warmup error {response.status}: {text}"
+                            )
+                            return
+
+                        await response.json()
+
+                cls.__is_warmed_up = True
+                logger.info("✅ Ollama warm-up completed successfully.")
+
+            except Exception as e:
+                logger.error(f"Ollama warmup failed: {e}")
 
     @staticmethod
     async def filter_latex(latex_input: str) -> str:
-        """
-        Send LaTeX text to the Ollama model and get back a filtered version.
-        """
+        """Call Ollama API to convert LaTeX → Wolfram Alpha syntax."""
         if not latex_input.strip():
             raise HTTPException(status_code=400, detail="Empty LaTeX input")
 
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
     
         strict_prompt = f"""Convert this LaTeX math expression to Wolfram Alpha syntax. 
-            CRITICAL: Output ONLY the Wolfram code, no explanations, no descriptions, no text.
-            ONLY output valid Wolfram Alpha syntax. No other text.
+CRITICAL: Output ONLY the Wolfram code, no explanations, no descriptions, no text.
+ONLY output valid Wolfram Alpha syntax.
 
-            Input: {latex_input.strip()}
+Input: {latex_input.strip()}
 
-            Output:"""
+Output:"""
         
         payload = {
             "model": "qwen2.5:3b",
             "prompt": strict_prompt,
             "stream": False,
             "options": {
-                "temperature": 0.1,  # Lower temperature for more deterministic output
+                "temperature": 0.1,
                 "num_predict": 100,
-                "stop": ["\n\n", "Explanation:", "Note:"]  # Stop sequences to prevent explanations
+                "stop": ["\n\n", "Explanation:", "Note:"]
             }
         }
 

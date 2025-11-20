@@ -3,3 +3,9 @@ uvicorn==0.27.0
 python-multipart==0.0.6
 prometheus-fastapi-instrumentator==7.1.0
 python-dotenv==1.0.0
+
+transformers>=4.37.0
+optimum[onnxruntime]
+aiohttp>=3.8.0
+opencv-python
+Pillow

@@ -6,6 +6,7 @@ import logging
 from app.schemas.error_schema import ErrorResponse
 from app.middlewares.log_middleware import LogMiddleware
 from app.services.pix2text_service import Pix2TextService
+from app.services.ollama_service import OllamaService
 
 def create_app() -> FastAPI:
     # Initialize FastAPI
@@ -45,6 +46,9 @@ def create_app() -> FastAPI:
     async def startup_event():     
         pix2text_service = await Pix2TextService.get_instance()
         await pix2text_service.init()
+
+        ollama_service = await OllamaService.get_instance()
+        await ollama_service.init()
 
         from app.controllers import router
         # Include routers
