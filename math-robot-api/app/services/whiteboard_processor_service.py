@@ -3,16 +3,34 @@ import numpy as np
 import logging
 from typing import List, Tuple
 from fastapi import HTTPException
+from ultralytics import YOLO
 from app.models.file_model import File
+from app.config import config
 
 logger = logging.getLogger(__name__)
 
 class WhiteboardProcessorService:
+    _instance = None
+    _model = None
     
+    @classmethod
+    async def init(cls):
+        """Initialize the YOLO model (call this once at startup)"""
+        if cls._model is None:
+            logger.info(f"Loading YOLO model from: {config.YOLO_PATH}")
+            cls._model = YOLO(config.YOLO_PATH)
+    
+    @classmethod
+    async def get_instance(cls):
+        """Return the singleton instance"""
+        if cls._instance is None:
+            cls._instance = WhiteboardProcessorService()
+        return cls._instance        
+
     @staticmethod
     async def extract_problems(file: File, padding_ratio: float = 0.1, target_regions: int = 1) -> List[File]:
         """
-        Extract mathematical problems from whiteboard image.
+        Extract mathematical problems from whiteboard image using YOLO for rectangle detection.
         
         Args:
             file: Input image file
@@ -26,7 +44,7 @@ class WhiteboardProcessorService:
             # Convert to OpenCV for processing
             cv2_image = await file.to_cv2()
             
-            # Process image with target region count
+            # Process image with target region count using YOLO
             problem_regions = await WhiteboardProcessorService._find_text_regions_with_target(
                 cv2_image, padding_ratio, target_regions
             )
@@ -55,9 +73,9 @@ class WhiteboardProcessorService:
 
     @staticmethod
     async def _find_text_regions_with_target(img: np.ndarray, padding_ratio: float, target_regions: int) -> List[np.ndarray]:
-        """Find text regions and merge until target count is reached"""
-        # Initial text detection
-        initial_rects = await WhiteboardProcessorService._detect_text_rectangles(img)
+        """Find text regions using YOLO and merge until target count is reached"""
+        # Initial text detection using YOLO
+        initial_rects = await WhiteboardProcessorService._detect_rectangles_yolo(img)
         
         if not initial_rects:
             return []
@@ -72,8 +90,50 @@ class WhiteboardProcessorService:
         return await WhiteboardProcessorService._extract_regions_from_rects(img, merged_rects, padding_ratio)
 
     @staticmethod
-    async def _detect_text_rectangles(img: np.ndarray) -> List[Tuple[int, int, int, int]]:
-        """Detect initial text regions as bounding rectangles"""
+    async def _detect_rectangles_yolo(img: np.ndarray) -> List[Tuple[int, int, int, int]]:
+        """Detect rectangles using YOLO model"""
+        # If YOLO model is not available, fall back to traditional detection
+        if WhiteboardProcessorService._model is None:
+            logger.warning("YOLO model not available, using fallback detection")
+            return await WhiteboardProcessorService._detect_text_rectangles_fallback(img)
+        
+        try:
+            # Run YOLO inference
+            results = WhiteboardProcessorService._model(img)
+            
+            if not results:
+                return []
+            
+            rects = []
+            h, w = img.shape[:2]
+            
+            for result in results:
+                if hasattr(result, 'boxes') and result.boxes is not None:
+                    for box in result.boxes:
+                        # Get bounding box coordinates (x1, y1, x2, y2)
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        
+                        # Convert to (x, y, width, height) format
+                        x = int(x1)
+                        y = int(y1)
+                        width = int(x2 - x1)
+                        height = int(y2 - y1)
+                        
+                        # Filter out very small detections
+                        min_area = (h * w) * 0.0001
+                        if width * height >= min_area:
+                            rects.append((x, y, width, height))
+            
+            logger.info(f"YOLO detected {len(rects)} rectangles")
+            return rects
+            
+        except Exception as e:
+            logger.error(f"YOLO detection failed: {str(e)}, using fallback")
+            return await WhiteboardProcessorService._detect_text_rectangles_fallback(img)
+
+    @staticmethod
+    async def _detect_text_rectangles_fallback(img: np.ndarray) -> List[Tuple[int, int, int, int]]:
+        """Fallback text detection using traditional computer vision"""
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         _, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
@@ -99,6 +159,7 @@ class WhiteboardProcessorService:
             x, y, w_rect, h_rect = cv2.boundingRect(c)
             rects.append((x, y, w_rect, h_rect))
         
+        logger.info(f"Fallback detection found {len(rects)} rectangles")
         return rects
 
     @staticmethod

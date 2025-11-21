@@ -9,3 +9,4 @@ optimum[onnxruntime]
 aiohttp>=3.8.0
 opencv-python
 Pillow
+ultralytics

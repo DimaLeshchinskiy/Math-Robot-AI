@@ -7,6 +7,7 @@ from app.schemas.error_schema import ErrorResponse
 from app.middlewares.log_middleware import LogMiddleware
 from app.services.pix2text_service import Pix2TextService
 from app.services.ollama_service import OllamaService
+from app.services.whiteboard_processor_service import WhiteboardProcessorService
 
 def create_app() -> FastAPI:
     # Initialize FastAPI
@@ -49,6 +50,9 @@ def create_app() -> FastAPI:
 
         ollama_service = await OllamaService.get_instance()
         await ollama_service.init()
+
+        whiteboard_processor_service = await WhiteboardProcessorService.get_instance()
+        await whiteboard_processor_service.init()
 
         from app.controllers import router
         # Include routers

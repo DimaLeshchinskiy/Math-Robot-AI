@@ -14,8 +14,10 @@ services:
       - BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
       - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
       - OLLAMA_URL=http://ollama:11434
+      - YOLO_PATH=/yolo_data/best.pt
     volumes:
       - ../app:/app/app
+      - ../../yolo_data:/yolo_data
     networks:
       - app-network
     depends_on:
