@@ -1,6 +1,6 @@
 version: "3.8"
 
-name: math-robot
+name: math-robot-full
 
 services:
   math-robot-api:
@@ -55,7 +55,26 @@ services:
       - "traefik.http.routers.traefik.rule=Host(`traefik.math-robot.localhost`)"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=web"
-      
+
+  ollama:
+    image: ollama/ollama:0.12.10
+    container_name: ollama
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ../../ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=false"
+
 networks:
   app-network:
     driver: bridge
