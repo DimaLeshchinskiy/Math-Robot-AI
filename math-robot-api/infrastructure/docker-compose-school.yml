@@ -1,0 +1,21 @@
+version: "3.8"
+
+name: math-robot-school-setup
+
+services:
+  math-robot-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: math-robot-api
+    image: math-robot-api:latest
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      BASIC_AUTH_USERNAME: ${BASIC_AUTH_USERNAME}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD}
+      OLLAMA_URL: ${OLLAMA_URL}
+      YOLO_PATH: "/yolo_data/best.pt"
+    volumes:
+      - ../app:/app/app
+      - ../../yolo_data:/yolo_data
