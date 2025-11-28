@@ -20,9 +20,6 @@ services:
       - ../../yolo_data:/yolo_data
     networks:
       - app-network
-    depends_on:
-      ollama:
-        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.math-robot-api.rule=Host(`${TRAEFIK_HOST}`)"
