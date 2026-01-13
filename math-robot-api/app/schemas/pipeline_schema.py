@@ -7,6 +7,8 @@ class ProblemResult(BaseModel):
     filename: str
     latex_raw: Optional[str] = None
     latex_filtered: Optional[str] = None
+    result_wolfram: Optional[str] = None
+    result_filtered: Optional[str] = None
     error: Optional[str] = None
     success: bool
 

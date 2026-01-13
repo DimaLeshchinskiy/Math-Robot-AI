@@ -107,3 +107,57 @@ Output:"""
         except Exception as e:
             logger.error(f"Failed to call Ollama service: {e}")
             raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
+
+    @staticmethod
+    async def filter_result(wolfram_input: str) -> str:
+        """
+        Send Wolfram result to the Ollama model and get back a filtered version.
+        """
+        if not wolfram_input.strip():
+            raise HTTPException(status_code=400, detail="Empty Wolfram input")
+
+        model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
+    
+        strict_prompt = f"""Interpret this Wolfram results into english speach so robot can say it.
+
+            Wolfram Result: {wolfram_input.strip()}
+
+            Robot says:"""
+        
+        payload = {
+            "model": "qwen2.5:3b",
+            "prompt": strict_prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.1,  # Lower temperature for more deterministic output
+                "num_predict": 100,
+                "stop": ["\n\n", "Explanation:", "Note:"]  # Stop sequences to prevent explanations
+            }
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(model_url, json=payload) as response:
+                    if response.status != 200:
+                        text = await response.text()
+                        logger.error(f"Ollama error {response.status}: {text}")
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Ollama service returned {response.status}"
+                        )
+
+                    data = await response.json()
+                    filtered = data.get("response", "").strip()
+
+                    if not filtered:
+                        raise HTTPException(
+                            status_code=500,
+                            detail="Ollama returned an empty response"
+                        )
+
+                    return filtered
+
+        except Exception as e:
+            logger.error(f"Failed to call Ollama service: {e}")
+            raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
+

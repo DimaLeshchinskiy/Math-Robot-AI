@@ -7,6 +7,7 @@ from app.models.file_model import File
 from app.services.whiteboard_processor_service import WhiteboardProcessorService
 from app.services.pix2text_service import Pix2TextService
 from app.services.ollama_service import OllamaService
+from app.services.wolfram_service import WolframService
 
 logger = logging.getLogger(__name__)
 
@@ -91,15 +92,27 @@ class PipelineService:
         try:
             # Step 1: OCR
             latex_result = await Pix2TextService.recognize_formula(problem_file)
+            print(problem_file.name + " " + latex_result, flush=True)
 
             # Step 2: Filter/normalize via Ollama
             filtered_latex = await OllamaService.filter_latex(latex_result)
+            print(problem_file.name + " " + filtered_latex, flush=True)
+            
+            # Step 3: Get result via Wolfram
+            wolfram_result = await WolframService.calculate(filtered_latex)
+            print(problem_file.name + " " + wolfram_result, flush=True)
+
+            # Step 4: Filter/normalize result via Ollama
+            filtered_result = await OllamaService.filter_result(wolfram_result)
+            print(problem_file.name + " " + filtered_result, flush=True)
 
             return {
                 "problem_id": index + 1,
                 "filename": problem_file.name,
                 "latex_raw": latex_result,
                 "latex_filtered": filtered_latex,
+                "result_wolfram": wolfram_result,
+                "result_filtered": filtered_result,
                 "error": None,
                 "success": True
             }
