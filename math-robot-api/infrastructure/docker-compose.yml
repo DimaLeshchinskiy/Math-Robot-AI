@@ -14,6 +14,7 @@ services:
       - BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
       - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
       - OLLAMA_URL=${OLLAMA_URL}
+      - WOLFRAM_URL=${WOLFRAM_URL}
       - YOLO_PATH=/yolo_data/best.pt
     volumes:
       - ../app:/app/app
