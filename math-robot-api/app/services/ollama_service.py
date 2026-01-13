@@ -32,7 +32,7 @@ class OllamaService:
 
             model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
             payload = {
-                "model": "qwen2.5:3b",
+                "model": "qwen2.5:7b",
                 "prompt": "warmup",
                 "stream": False,
                 "options": {"num_predict": 1}
@@ -67,7 +67,9 @@ class OllamaService:
         # Remove trailing '=' if present (also handle cases with spaces)
         latex_cleaned = re.sub(r'\s*=*\s*$', '', latex_cleaned)
         # Remove backslashes not followed by letters
-        latex_cleaned = re.sub(r'\\(?![a-zA-Z])', '', latex_cleaned)  
+        latex_cleaned = re.sub(r'\\(?![a-zA-Z])', '', latex_cleaned)
+        # Remove spaces between numbers
+        latex_cleaned = re.sub(r'(\d)(\s+)(?=\d)', r'\1', latex_cleaned)
 
         # Check if it's an equation (contains equation/inequality symbols)
         # This pattern looks for =, <, >, ≤, ≥, ≠ in the middle of the expression
@@ -110,6 +112,7 @@ class OllamaService:
             EXAMPLES:
             - "x^2 + 2x + 1" → "x^2 + 2*x + 1"
             - "\\int x^2 dx" → "Integrate[x^2, x]"
+            - "frac [3] [4] → "3 / 4"
 
             Input: {latex_cleaned}
 
@@ -120,7 +123,7 @@ class OllamaService:
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
         
         payload = {
-            "model": "qwen2.5:3b",
+            "model": "qwen2.5:7b",
             "prompt": strict_prompt,
             "stream": False,
             "options": {
@@ -166,14 +169,39 @@ class OllamaService:
 
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
     
-        strict_prompt = f"""Your task is to convert Wolfram computation results into a natural English sentence for a robot to speak. 
-Return ONLY the final spoken sentence, nothing else. Say constants as words like pi, euler number... Do not print in unicode.
+        strict_prompt = f"""TASK: Convert Wolfram computation results into natural English speech for a robot voice.
 
+CRITICAL RULES:
+1. Return ONLY the final spoken sentence, nothing else
+2. Do not include prefixes like "Robot says:" or "The result is:"
+3. Speak constants as words: π → "pi", e → "Euler's number", ∞ → "infinity"
+4. Keep numbers as digits: 3.14159 → "3 point 1 4 1 5 9" (speak each digit)
+5. No Unicode symbols - use words instead
+
+EXAMPLES:
+Input: Task: Limit[x/Sin[x], x->0], Result: 1
+Output: The limit of x over sine x as x approaches zero is 1.
+
+Input: Task: Integrate[x^2, [x, 0, 1]], Result: 1/3
+Output: The integral of x squared from 0 to 1 is one third.
+
+Input: Task: Sum[1/n^2, [n, 1, Infinity]], Result: π^2/6
+Output: The sum of 1 over n squared from n equals 1 to infinity equals pi squared over 6.
+
+Input: Task: Derivative[Sin[x], x], Result: Cos[x]
+Output: The derivative of sine x with respect to x is cosine x.
+
+Input: Task: 2 + 2, Result: 4
+Output: 2 plus 2 equals 4.
+
+INPUT TO CONVERT:
 Wolfram Task: {latex_input.strip()}
-Wolfram Result: {wolfram_input.strip()}"""
+Wolfram Result: {wolfram_input.strip()}
+
+SPOKEN SENTENCE (output ONLY this):"""
         
         payload = {
-            "model": "qwen2.5:3b",
+            "model": "qwen2.5:7b",
             "prompt": strict_prompt,
             "stream": False,
             "options": {
