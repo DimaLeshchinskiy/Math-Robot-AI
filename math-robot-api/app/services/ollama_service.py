@@ -119,11 +119,13 @@ Output:"""
 
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
     
-        strict_prompt = f"""Interpret this Wolfram results into english speach so robot can say it.
-            Wolfram Task: {latex_input.strip()}
-            Wolfram Result: {wolfram_input.strip()}
+        strict_prompt = f"""Your task is to convert Wolfram computation results into a natural English sentence for a robot to speak. 
+Return ONLY the final spoken sentence, nothing else.
 
-            Robot says:"""
+Wolfram Task: {latex_input.strip()}
+Wolfram Result: {wolfram_input.strip()}
+
+The robot should say:"""
         
         payload = {
             "model": "qwen2.5:3b",
