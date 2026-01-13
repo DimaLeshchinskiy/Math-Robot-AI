@@ -76,6 +76,8 @@ class PipelineService:
                     "filename": problem_files[i].name,
                     "latex_raw": None,
                     "latex_filtered": None,
+                    "result_wolfram": None,
+                    "result_filtered": None,
                     "error": str(result),
                     "success": False
                 })

@@ -76,6 +76,8 @@ async def process_pipeline(
                 filename=result.get('filename', ''),
                 latex_raw=result.get('latex_raw', ''),
                 latex_filtered=result.get('latex_filtered', ''),
+                result_wolfram=result.get('result_wolfram', ''),
+                result_filtered=result.get('result_filtered', ''),
                 error=result.get('error'),
                 success=result.get('success', False)
             ))
