@@ -65,7 +65,8 @@ class OllamaService:
     
         strict_prompt = f"""Convert this LaTeX math expression to Wolfram Alpha syntax. 
 CRITICAL: Output ONLY the Wolfram code, no explanations, no descriptions, no text.
-ONLY output valid Wolfram Alpha syntax.
+ONLY output valid Wolfram Alpha syntax. If the last character is '=' remove it. Remove all unnecesary backslashes.
+For equations use Solve.
 
 Input: {latex_input.strip()}
 
@@ -109,7 +110,7 @@ Output:"""
             raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
 
     @staticmethod
-    async def filter_result(wolfram_input: str) -> str:
+    async def filter_result(latex_input: str, wolfram_input: str) -> str:
         """
         Send Wolfram result to the Ollama model and get back a filtered version.
         """
@@ -119,7 +120,7 @@ Output:"""
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
     
         strict_prompt = f"""Interpret this Wolfram results into english speach so robot can say it.
-
+            Wolfram Task: {latex_input.strip()}
             Wolfram Result: {wolfram_input.strip()}
 
             Robot says:"""

@@ -105,7 +105,7 @@ class PipelineService:
             print(problem_file.name + " " + wolfram_result, flush=True)
 
             # Step 4: Filter/normalize result via Ollama
-            filtered_result = await OllamaService.filter_result(wolfram_result)
+            filtered_result = await OllamaService.filter_result(filtered_latex, wolfram_result)
             print(problem_file.name + " " + filtered_result, flush=True)
 
             return {
