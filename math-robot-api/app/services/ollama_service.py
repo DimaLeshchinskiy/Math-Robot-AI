@@ -167,12 +167,10 @@ class OllamaService:
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
     
         strict_prompt = f"""Your task is to convert Wolfram computation results into a natural English sentence for a robot to speak. 
-Return ONLY the final spoken sentence, nothing else.
+Return ONLY the final spoken sentence, nothing else. Say constants as words like pi, euler number... Do not print in unicode.
 
 Wolfram Task: {latex_input.strip()}
-Wolfram Result: {wolfram_input.strip()}
-
-The robot should say:"""
+Wolfram Result: {wolfram_input.strip()}"""
         
         payload = {
             "model": "qwen2.5:3b",
