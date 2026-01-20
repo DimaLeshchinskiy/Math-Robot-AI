@@ -159,55 +159,101 @@ class OllamaService:
             logger.error(f"Failed to call Ollama service: {e}")
             raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
 
+
     @staticmethod
     async def filter_result(latex_input: str, wolfram_input: str) -> str:
         """
         Send Wolfram result to the Ollama model and get back a filtered version.
+        Supports both English (en) and Czech (cz) languages.
         """
         if not wolfram_input.strip():
             raise HTTPException(status_code=400, detail="Empty Wolfram input")
 
         model_url = f"{config.OLLAMA_URL.rstrip('/')}/api/generate"
-    
-        strict_prompt = f"""TASK: Convert Wolfram computation results into natural English speech for a robot voice.
+        lang = config.OLLAMA_LANG.lower()  # en, cz
+        
+        # Define language-specific prompts
+        prompts = {
+            "en": {
+                "prompt": """TASK: Convert Wolfram computation results into natural English speech for a robot voice.
 
-CRITICAL RULES:
-1. Return ONLY the final spoken sentence, nothing else
-2. Do not include prefixes like "Robot says:" or "The result is:"
-3. Speak constants as words: π → "pi", e → "Euler's number", ∞ → "infinity"
-4. Keep numbers as digits: 3.14159 → "3 point 1 4 1 5 9" (speak each digit)
-5. No Unicode symbols - use words instead
+    CRITICAL RULES:
+    1. Return ONLY the final spoken sentence, nothing else
+    2. Do not include prefixes like "Robot says:" or "The result is:"
+    3. Speak constants as words: π → "pi", e → "Euler's number", ∞ → "infinity"
+    4. Keep numbers as digits: 3.14159 → "3 point 1 4 1 5 9" (speak each digit)
+    5. No Unicode symbols - use words instead
 
-EXAMPLES:
-Input: Task: Limit[x/Sin[x], x->0], Result: 1
-Output: The limit of x over sine x as x approaches zero is 1.
+    EXAMPLES:
+    Input: Task: Limit[x/Sin[x], x->0], Result: 1
+    Output: 1.
 
-Input: Task: Integrate[x^2, [x, 0, 1]], Result: 1/3
-Output: The integral of x squared from 0 to 1 is one third.
+    Input: Task: Integrate[x^2, [x, 0, 1]], Result: 1/3
+    Output: result is one third.
 
-Input: Task: Sum[1/n^2, [n, 1, Infinity]], Result: π^2/6
-Output: The sum of 1 over n squared from n equals 1 to infinity equals pi squared over 6.
+    Input: Task: Sum[1/n^2, [n, 1, Infinity]], Result: π^2/6
+    Output: pi squared over 6.
 
-Input: Task: Derivative[Sin[x], x], Result: Cos[x]
-Output: The derivative of sine x with respect to x is cosine x.
+    Input: Result: Cos[x]
+    Output: Result is cosine of x.
 
-Input: Task: 2 + 2, Result: 4
-Output: 2 plus 2 equals 4.
+    Input: Result: 4
+    Output: Result is 4
 
-INPUT TO CONVERT:
-Wolfram Task: {latex_input.strip()}
-Wolfram Result: {wolfram_input.strip()}
+    INPUT TO CONVERT:
+    Wolfram Result: {wolfram_input}
 
-SPOKEN SENTENCE (output ONLY this):"""
+    SPOKEN SENTENCE (output ONLY this):"""
+            },
+            "cz": {
+                "prompt": """ÚKOL: Převeď výsledky z Wolframu do přirozené češtiny pro hlas robota.
+
+    KRITICKÁ PRAVIDLA:
+    1. Vrať POUZE výslednou větu k odmluvení, nic jiného
+    2. Nepřidávej předpony jako "Robot říká:" nebo "Výsledek je:"
+    3. Konstanty převáděj na slova: π → "pí", e → "Eulerovo číslo", ∞ → "nekonečno"
+    4. Čísla nech jako číslice: 3,14159 → "3 celá 1 4 1 5 9" (vyřkni každou číslici)
+    5. Žádné Unicode symboly - místo nich použij slova
+
+    PŘÍKLADY:
+    Vstup: Úloha: Limit[x/Sin[x], x->0], Výsledek: 1
+    Výstup: 1.
+
+    Vstup: Úloha: Integrate[x^2, [x, 0, 1]], Výsledek: 1/3
+    Výstup: výsledek je jedna třetina.
+
+    Vstup: Úloha: Sum[1/n^2, [n, 1, Infinity]], Výsledek: π^2/6
+    Výstup: pí na druhou lomeno 6.
+
+    Vstup: Výsledek: Cos[x]
+    Výstup: Výsledek je cosinus x.
+
+    Vstup: Výsledek: 4
+    Výstup: Výsledek je 4
+
+    VSTUP KE ZPRACOVÁNÍ:
+    Wolfram Výsledek: {wolfram_input}
+
+    VĚTA K ODMLUVENÍ (vrať POUZE toto):"""
+            }
+        }
+        
+        # Get the appropriate prompt for the current language
+        if lang not in prompts:
+            logger.warning(f"Unsupported language: {lang}, defaulting to English")
+            lang = "en"
+        
+        prompt_config = prompts[lang]
+        strict_prompt = prompt_config["prompt"].format(wolfram_input=wolfram_input.strip())
         
         payload = {
             "model": "qwen2.5:7b",
             "prompt": strict_prompt,
             "stream": False,
             "options": {
-                "temperature": 0.1,  # Lower temperature for more deterministic output
+                "temperature": 0.1,
                 "num_predict": 100,
-                "stop": ["\n\n", "Explanation:", "Note:"]  # Stop sequences to prevent explanations
+                "stop": ["\n\n", "Explanation:", "Note:", "Vysvětlení:", "Poznámka:"]  # Bilingual stop sequences
             }
         }
 
@@ -236,4 +282,3 @@ SPOKEN SENTENCE (output ONLY this):"""
         except Exception as e:
             logger.error(f"Failed to call Ollama service: {e}")
             raise HTTPException(status_code=500, detail=f"Ollama request failed: {e}")
-
