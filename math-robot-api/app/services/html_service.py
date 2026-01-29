@@ -342,19 +342,19 @@ class HtmlService:
                     <h1>Math Problem Recognition Results</h1>
                     <p class="subtitle">Image analysis and LaTeX conversion results</p>
                 </header>
+
+                <section class="results-section">
+                    <h2 class="section-title">Recognition Results</h2>
+                    <div class="results-container">
+                        {results_html}
+                    </div>
+                </section>
                 
                 <section class="image-section">
                     <h2 class="section-title">Original Image</h2>
                     <div class="image-container">
                         <img src="{image_filename}" alt="Uploaded math problem">
                         <p class="image-caption">Uploaded image containing mathematical expressions</p>
-                    </div>
-                </section>
-                
-                <section class="results-section">
-                    <h2 class="section-title">Recognition Results</h2>
-                    <div class="results-container">
-                        {results_html}
                     </div>
                 </section>
                 
