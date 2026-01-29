@@ -84,15 +84,15 @@ class OllamaService:
             CRITICAL RULES:
             1. Output ONLY the Wolfram code, no explanations, no markdown, no extra text
             2. The input is an equation/inequality (contains =, <, >, etc.)
-            3. Wrap the expression in Solve[], Reduce[], or appropriate equation-solving function
-            4. Use == for equations inside Solve[]/Reduce[] (Wolfram uses double equals)
+            3. Wrap the expression in Reduce[], or appropriate equation-solving function
+            4. Use == for equations inside Reduce[] (Wolfram uses double equals)
             5. Remove any trailing = signs from the expression
             6. Include the variable to solve for if not obvious
 
             EXAMPLES:
-            - "x^2 + 2x + 1 = 0" → "Solve[x^2 + 2*x + 1 == 0, x]"
-            - "2x + 3 > 7" → "Solve[2*x + 3 > 7, x]"
-            - "a^2 = b^2 + c^2" → "Solve[a^2 == b^2 + c^2, a]"
+            - "x^2 + 2x + 1 = 0" → "Reduce[x^2 + 2*x + 1 == 0, x]"
+            - "2x + 3 > 7" → "Reduce[2*x + 3 > 7, x]"
+            - "a^2 = b^2 + c^2" → "Reduce[a^2 == b^2 + c^2, a]"
 
             Input: {latex_cleaned}
 
