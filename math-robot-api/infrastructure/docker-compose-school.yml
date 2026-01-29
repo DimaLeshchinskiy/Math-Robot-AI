@@ -18,6 +18,7 @@ services:
       OLLAMA_LANG: ${OLLAMA_LANG}
       WOLFRAM_URL: ${WOLFRAM_URL}
       YOLO_PATH: "/yolo_data/best.pt"
+      PUBLIC_FOLDER_PATH: "/app/app/public"
     volumes:
       - ../app:/app/app
       - ../../yolo_data:/yolo_data

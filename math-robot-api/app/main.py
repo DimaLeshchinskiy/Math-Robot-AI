@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
+from pathlib import Path
 import logging
 
 from app.schemas.error_schema import ErrorResponse
@@ -8,6 +10,7 @@ from app.middlewares.log_middleware import LogMiddleware
 from app.services.pix2text_service import Pix2TextService
 from app.services.ollama_service import OllamaService
 from app.services.whiteboard_processor_service import WhiteboardProcessorService
+from app.config import config
 
 def create_app() -> FastAPI:
     # Initialize FastAPI
@@ -31,7 +34,7 @@ def create_app() -> FastAPI:
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        format="%(name)s - %(levelname)s - %(message)s",
     )
 
     # CORS
@@ -57,6 +60,12 @@ def create_app() -> FastAPI:
         from app.controllers import router
         # Include routers
         app.include_router(router)
+
+        public_path = Path(config.PUBLIC_FOLDER_PATH) 
+        public_path.mkdir(exist_ok=True)
+        
+        app.mount("/public", StaticFiles(directory=str(public_path)), name="public")
+        logging.info(f"Mounted static files from: {public_path.absolute()}")
 
     return app
 

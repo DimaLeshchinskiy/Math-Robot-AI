@@ -4,6 +4,7 @@ import time
 from app.services.auth_service import basic_auth
 from app.services.file_service import FileService
 from app.services.pipeline_service import PipelineService
+from app.services.html_service import HtmlService
 from app.schemas.pipeline_schema import PipelineResponse, ProblemResult
 
 router = APIRouter()
@@ -81,6 +82,12 @@ async def process_pipeline(
                 error=result.get('error'),
                 success=result.get('success', False)
             ))
+
+        # Generate and save HTML
+        await HtmlService.save_problem(
+            file=internal_file,
+            problem_results=problem_results
+        )
         
         return PipelineResponse(
             total_problems=len(raw_results),

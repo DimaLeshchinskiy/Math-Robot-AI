@@ -8,5 +8,6 @@ class Config:
         self.OLLAMA_LANG = os.getenv("OLLAMA_LANG", "en")
         self.WOLFRAM_URL = os.getenv("WOLFRAM_URL")
         self.YOLO_PATH = os.getenv("YOLO_PATH")
+        self.PUBLIC_FOLDER_PATH = os.getenv("PUBLIC_FOLDER_PATH")
 
 config = Config()
