@@ -29,6 +29,8 @@ class MathRobot(naoqi.ALModule):
 
 
         # MAKE PEPPER STAND UP AT START
+        self.awarnes = naoqi.ALProxy("ALBasicAwareness")
+        self.awarnes.setEnabled(False)
         self.posture = naoqi.ALProxy("ALRobotPosture")
         self.posture.goToPosture("StandInit", 0.5)
         time.sleep(1)  # let posture stabilize
