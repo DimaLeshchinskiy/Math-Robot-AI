@@ -1,59 +1,320 @@
-🤖 Math Robot AI
-================
+# 🤖 Math Robot AI
 
-Intelligent Mathematical Problem Solving Pipeline
+**Intelligent Mathematical Problem Solving Pipeline**
+From whiteboard image → OCR → AI normalization → Wolfram evaluation → spoken result (Pepper robot)
 
-From whiteboard images to Wolfram solutions - Automated mathematical problem processing
+---
 
-🚀 Quick Start
---------------
+## 📌 Overview
 
-### Get Started in 3 Steps
+Math Robot AI is a distributed system that:
 
-1. **Clone and setup environment**
-   ```bash
-   git clone [repository-url]
-   cd math-robot-api/infrastructure
-   ```
-2. **Copy environment file**
-    ```bash
-   cp example.env .env 
-   ```
-3. **Start services** docker-compose up -d
-    ```bash
-   docker-compose up -d
-   ```
+1. Captures a whiteboard image (Pepper robot or API upload)
+2. Detects mathematical expressions
+3. Converts them to LaTeX (Pix2Text OCR)
+4. Cleans and normalizes LaTeX using LLM (Ollama – Qwen2.5 3B )
+5. Converts to Wolfram syntax
+6. Evaluates using Wolfram Kernel (via proxy)
+7. Returns structured results
+8. Generates HTML output
+9. Speaks the result via Pepper robot
 
-**Note:** First startup may take several minutes as ML models are downloaded and initialized. If services don't start properly, run `docker-compose up -d` multiple times.
+---
 
-**Important:** Update default credentials in production! The first startup may require multiple `docker-compose up -d` attempts due to ML model initialization.
+# 📦 Repository Structure
 
-API will be available at: **http://math-robot-api.localhost/docs**
+```
+.
+├── math-robot-api/         # Main FastAPI backend
+│   ├── app/
+│   │   ├── controllers/    # API endpoints
+│   │   ├── services/       # Core business logic
+│   │   ├── schemas/        # Pydantic models
+│   │   ├── models/         # Internal domain models
+│   │   ├── middlewares/    # Logging middleware
+│   │   ├── config.py
+│   │   └── main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── math-robot-client/      # Pepper robot client
+│   ├── main.py
+│   └── config.py
+│
+├── wolfram-proxy/          # Wolfram evaluation service
+│   ├── main.py
+│   └── requirments.txt
+│
+├── infrastructure/
+│   ├── docker-compose.yml
+│   ├── docker-compose-school.yml
+│   └── example.env
+│
+└── yolo_data/
+    └── best.pt             # YOLO model for problem detection
+```
+---
 
-📋 Project Overview
--------------------
+# 🚀 Quick Start
 
-Math Robot AI is a comprehensive pipeline that processes mathematical problems from whiteboard images through multiple AI-powered stages to generate computable solutions.
+---
 
-### System Architecture
+## 0️⃣ Pull AI model into Ollama
 
-**Image Input → Problem Detection → LaTeX OCR → AI Filtering → Wolfram Syntax → Solution**
+```bash
+ollama list
+ollama pull qwen2.5:3b
+```
 
-### Core Pipeline Stages
+*This downloads the Qwen2.5 3B model.
+Run this before first use or if the model is missing.*
 
-*   **Stage 1:** Whiteboard image processing and problem segmentation
-*   **Stage 2:** Mathematical formula OCR using Pix2Text
-*   **Stage 3:** AI-powered LaTeX filtering and validation with Ollama (Qwen2.5 3B)
-*   **Stage 4:** Translation to Wolfram Mathematica syntax
-*   **Stage 5:** Mathematical solving (external Wolfram kernel)
+---
 
-🛠️ Technology Stack
---------------------
+## 1️⃣ Clone repository
 
-#### Backend & AI Services
+```bash
+git clone <repository-url>
+cd math-robot-api
+```
+
+---
+
+## 2️⃣ Configure environment
+
+```bash
+cd infrastructure
+cp example.env .env
+```
+
+Edit `.env` if needed.
+
+---
+
+## 3️⃣ Start Backend Services (Docker)
+
+### 🧑‍💻 Normal development mode
+
+```bash
+docker-compose up -d
+```
+
+---
+
+### 🎓 School mode (REQUIRED for school demo)
+
+```bash
+docker-compose -f docker-compose-school.yml up -d
+```
+
+School mode includes:
+
+* Full pipeline services
+* Preconfigured classroom setup
+
+---
+
+## 4️⃣ Start Wolfram Proxy (Required)
+
+⚠ The Wolfram Proxy must be started manually in a **separate terminal**.
+
+### Open a new terminal:
+
+```bash
+cd wolfram-proxy
+```
+
+### Create virtual environment
+
+```bash
+python3 -m venv venv
+```
+
+### Activate virtual environment
+
+**Linux / macOS**
+
+```bash
+source venv/bin/activate
+```
+
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Start Wolfram Proxy
+
+```bash
+python main.py
+```
+
+If successful, you should see:
+
+```
+Running on http://0.0.0.0:8010
+```
+
+⚠ Make sure Wolfram Engine is installed and the path matches:
+
+```python
+WolframLanguageSession("/usr/local/bin/WolframKernel")
+```
+
+---
+
+## ⏳ First Startup Notice
+
+First startup may take several minutes because:
+
+* Pix2Text model initializes
+* Ollama model (Qwen2.5 3B) loads
+* YOLO weights are loaded
+* Wolfram session initializes
+
+---
+
+# 🌐 Services
+
+| Service            | Port       | Description                |
+| ------------------ | ---------- | -------------------------- |
+| math-robot-api     | 8000       | Main FastAPI backend       |
+| wolfram-proxy      | 8010       | Wolfram evaluation service |
+
+API docs available at:
+
+```
+http://localhost:8000/docs
+```
+
+---
+
+# 🔐 Authentication
+
+API uses **Basic Authentication**.
+
+Default (example):
+
+```
+username: test
+password: test
+```
+
+⚠ Change credentials in production.
+
+Pepper client sends:
+
+```python
+Authorization: Basic base64("test:test")
+```
+
+---
+
+# 🧠 Processing Pipeline
+
+The `PipelineService` orchestrates:
+
+### Step 1 — Whiteboard Processing
+
+* YOLO model detects problem regions
+* Extracts individual problem images
+
+### Step 2 — OCR
+
+* Pix2Text converts image → LaTeX
+
+### Step 3 — LaTeX Filtering
+
+* Ollama (Qwen2.5 3B)
+* Fixes syntax
+* Normalizes structure
+* Converts to Wolfram syntax
+
+### Step 4 — Wolfram Evaluation
+
+* Sends to `wolfram-proxy`
+* Evaluates via Wolfram Kernel
+
+### Step 5 — Result Filtering
+
+* LLM cleans output
+* Removes unnecessary formatting
+
+---
+
+# 📄 HTML File Generator
+
+After pipeline execution:
+
+```python
+HtmlService.save_problem(...)
+```
+
+Generates:
+
+* Structured HTML file
+* Saved in public directory
+* Accessible via:
+
+```
+/public/index.html
+```
+
+This allows:
+
+* Viewing results on tablet
+* Shows last solved problem
+* Prints helpful info for debug
+
+---
+
+# 🤖 Pepper Robot Client
+
+Located in:
+
+```
+math-robot-client/
+```
+
+### What it does:
+
+* Waits for head touch
+* Captures camera image
+* Sends image via multipart/form-data
+* Receives result
+* Speaks solution
+* Displays HTML on tablet
+---
+
+# 🔬 Wolfram Proxy
+
+Located in:
+
+```
+wolfram-proxy/
+```
+
+Lightweight Flask service that:
+
+* Maintains persistent `WolframLanguageSession`
+* Evaluates Wolfram code
+* Exposes:
+
+```
+GET /eval?code=...
+GET /health
+```
+
+Required for full pipeline functionality.
+
+---
+
+# 🛠 Technology Stack
+
+#### Backend
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
 
 #### AI & Machine Learning
 ![Pix2Text](https://img.shields.io/badge/Pix2Text-FF6B6B?style=for-the-badge&logo=book&logoColor=white)
@@ -69,55 +330,57 @@ Math Robot AI is a comprehensive pipeline that processes mathematical problems f
 #### Infrastructure & Tools
 ![Git](https://img.shields.io/badge/Git-F05033?style=for-the-badge&logo=git&logoColor=white)
 ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
 ![REST API](https://img.shields.io/badge/REST_API-FF6B6B?style=for-the-badge&logo=api&logoColor=white)
 
-📁 Project Structure
---------------------
+---
 
-**Key Directories:**
+# 🧪 Main Endpoint
 
-- **`controllers/`** - FastAPI route handlers and endpoint definitions
-- **`services/`** - Core business logic and processing pipelines
-- **`schemas/`** - Pydantic models for request/response validation
-- **`models/`** - Internal data models and domain objects
-- **`middlewares/`** - FastAPI middleware for logging, auth, etc.
-- **`infrastructure/`** - Docker and deployment configuration
+## POST `/pipeline/{target_regions}`
 
-```
-math-robot-api/
-├── app/
-│ ├── controllers/
-│ │ ├── pipeline_controller.py
-│ │ ├── pix2text_controller.py
-│ │ ├── whiteboard_processor_controller.py
-│ │ └── status_controller.py
-│ ├── services/
-│ │ ├── pipeline_service.py
-│ │ ├── pix2text_service.py
-│ │ ├── whiteboard_processor_service.py
-│ │ ├── ollama_service.py
-│ │ ├── file_service.py
-│ │ └── auth_service.py
-│ ├── schemas/
-│ │ ├── pipeline_schema.py
-│ │ ├── latex_schema.py
-│ │ └── whiteboard_schema.py
-│ ├── models/
-│ │ └── file_model.py
-│ └── middlewares/
-│ └── log_middleware.py
-├── infrastructure/
-│ ├── docker-compose.yml
-│ ├── .env
-│ └── example.env
-└── requirements.txt
+### Parameters:
+
+* `target_regions` — expected number of expressions (1–20)
+* `file` — whiteboard image (multipart/form-data)
+
+### Returns:
+
+```json
+{
+  "total_problems": 1,
+  "successful": 1,
+  "failed": 0,
+  "results": [
+    {
+      "problem_id": 1,
+      "latex_raw": "...",
+      "latex_filtered": "...",
+      "result_wolfram": "...",
+      "result_filtered": "...",
+      "success": true
+    }
+  ],
+  "processing_time": 3.42
+}
 ```
 
-🔮 Future Components
---------------------
+---
 
-### Planned Features
+# ⚠ Important Notes
 
-*   Real-time mathematical solution execution
-*   Physical robot integration for solution demonstration
-*   Detailed PDF documentation and presentation materials explaining the mathematical processing pipeline and robot integration.
+* YOLO model file must exist:
+
+```
+yolo_data/best.pt
+```
+
+* Wolfram Kernel path must match:
+
+```python
+WolframLanguageSession("/usr/local/bin/WolframKernel")
+```
+
+* For school demo → always use `docker-compose-school.yml`
+
+---
